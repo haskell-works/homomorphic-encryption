@@ -1,6 +1,12 @@
 module Example1 where
 
 import Data.Monoid
+import Prelude hiding (not)
+import qualified Prelude as P
+
+infixr 4 .^.
+infixr 3 .&.
+infixr 2 .|.
 
 require :: Bool -> String -> IO ()
 require True _ = return ()
@@ -8,12 +14,15 @@ require False message = error ("Require: " <> message)
 
 newtype Crypt = Crypt { getCrypt :: Integer }
 
+newtype Boolean = Boolean { getBoolean :: Crypt }
+
 instance Show Crypt where
   show (Crypt v) = show v
 
 instance Num Crypt where
   (Crypt a) + (Crypt b) = Crypt (a + b)
   (Crypt a) * (Crypt b) = Crypt (a * b)
+  negate (Crypt a) = Crypt (-a)
 
 λ = 5 :: Integer
 theN = λ
@@ -38,6 +47,30 @@ c1 = encrypt r1 m1
 
 d0 = decrypt c0
 d1 = decrypt c1
+
+instance Show Boolean where
+  show (Boolean c) = show (decrypt c == 1)
+
+true  = Boolean c1
+false = Boolean c0
+
+class Logical a where
+  not :: a -> a
+  (.&.) :: a -> a -> a
+  (.|.) :: a -> a -> a
+  (.^.) :: a -> a -> a
+
+instance Logical Bool where
+  not = P.not
+  (.&.) = (&&)
+  (.|.) = (||)
+  x .^. y = x || y && not (x && y)
+
+instance Logical Boolean where
+  not = (true .^.)
+  (Boolean x) .&. (Boolean y) = Boolean (x * y)
+  x .|. y = not (not (x .&. x) .&. not (y .&. y))
+  (Boolean x) .^. (Boolean y) = Boolean (x + y)
 
 run :: IO ()
 run = do
@@ -69,6 +102,23 @@ run = do
   putStrLn $ "decrypt (c1 + c1 + c0) = " <> show (decrypt (c1 + c1 + c0))
   putStrLn $ "decrypt (c1 + c1 + c1) = " <> show (decrypt (c1 + c1 + c1))
 
+  putStrLn $ "decrypt (c0 + c0 + c0 + c0) = " <> show (decrypt (c0 + c0 + c0 + c0))
+  putStrLn $ "decrypt (c0 + c0 + c0 + c1) = " <> show (decrypt (c0 + c0 + c0 + c1))
+  putStrLn $ "decrypt (c0 + c0 + c1 + c0) = " <> show (decrypt (c0 + c0 + c1 + c0))
+  putStrLn $ "decrypt (c0 + c0 + c1 + c1) = " <> show (decrypt (c0 + c0 + c1 + c1))
+  putStrLn $ "decrypt (c0 + c1 + c0 + c0) = " <> show (decrypt (c0 + c1 + c0 + c0))
+  putStrLn $ "decrypt (c0 + c1 + c0 + c1) = " <> show (decrypt (c0 + c1 + c0 + c1))
+  putStrLn $ "decrypt (c0 + c1 + c1 + c0) = " <> show (decrypt (c0 + c1 + c1 + c0))
+  putStrLn $ "decrypt (c0 + c1 + c1 + c1) = " <> show (decrypt (c0 + c1 + c1 + c1))
+  putStrLn $ "decrypt (c1 + c0 + c0 + c0) = " <> show (decrypt (c1 + c0 + c0 + c0))
+  putStrLn $ "decrypt (c1 + c0 + c0 + c1) = " <> show (decrypt (c1 + c0 + c0 + c1))
+  putStrLn $ "decrypt (c1 + c0 + c1 + c0) = " <> show (decrypt (c1 + c0 + c1 + c0))
+  putStrLn $ "decrypt (c1 + c0 + c1 + c1) = " <> show (decrypt (c1 + c0 + c1 + c1))
+  putStrLn $ "decrypt (c1 + c1 + c0 + c0) = " <> show (decrypt (c1 + c1 + c0 + c0))
+  putStrLn $ "decrypt (c1 + c1 + c0 + c1) = " <> show (decrypt (c1 + c1 + c0 + c1))
+  putStrLn $ "decrypt (c1 + c1 + c1 + c0) = " <> show (decrypt (c1 + c1 + c1 + c0))
+  putStrLn $ "decrypt (c1 + c1 + c1 + c1) = " <> show (decrypt (c1 + c1 + c1 + c1))
+
   putStrLn $ "decrypt (c0 * c0) = " <> show (decrypt (c0 * c0))
   putStrLn $ "decrypt (c0 * c1) = " <> show (decrypt (c0 * c1))
   putStrLn $ "decrypt (c1 * c0) = " <> show (decrypt (c1 * c0))
@@ -82,6 +132,29 @@ run = do
   putStrLn $ "decrypt (c1 * c0 * c1) = " <> show (decrypt (c1 * c0 * c1))
   putStrLn $ "decrypt (c1 * c1 * c0) = " <> show (decrypt (c1 * c1 * c0))
   putStrLn $ "decrypt (c1 * c1 * c1) = " <> show (decrypt (c1 * c1 * c1))
+
+  putStrLn $ "decrypt (-c0) = " <> show (decrypt (-c0))
+  putStrLn $ "decrypt (-c1) = " <> show (decrypt (-c1))
+
+  putStrLn $ "decrypt (-(c0 + c0)) = " <> show (decrypt (-(c0 + c0)))
+  putStrLn $ "decrypt (-(c0 + c1)) = " <> show (decrypt (-(c0 + c1)))
+  putStrLn $ "decrypt (-(c1 + c0)) = " <> show (decrypt (-(c1 + c0)))
+  putStrLn $ "decrypt (-(c1 + c1)) = " <> show (decrypt (-(c1 + c1)))
+
+  putStrLn $ "decrypt ((-c0) * (-c0)) = " <> show (decrypt ((-c0) * (-c0)))
+  putStrLn $ "decrypt ((-c0) * (-c1)) = " <> show (decrypt ((-c0) * (-c1)))
+  putStrLn $ "decrypt ((-c1) * (-c0)) = " <> show (decrypt ((-c1) * (-c0)))
+  putStrLn $ "decrypt ((-c1) * (-c1)) = " <> show (decrypt ((-c1) * (-c1)))
+
+  putStrLn $ "decrypt (-(c0 * c0)) = " <> show (decrypt (-(c0 * c0)))
+  putStrLn $ "decrypt (-(c0 * c1)) = " <> show (decrypt (-(c0 * c1)))
+  putStrLn $ "decrypt (-(c1 * c0)) = " <> show (decrypt (-(c1 * c0)))
+  putStrLn $ "decrypt (-(c1 * c1)) = " <> show (decrypt (-(c1 * c1)))
+
+  putStrLn $ "decrypt ((-c0) + (-c0)) = " <> show (decrypt ((-c0) + (-c0)))
+  putStrLn $ "decrypt ((-c0) + (-c1)) = " <> show (decrypt ((-c0) + (-c1)))
+  putStrLn $ "decrypt ((-c1) + (-c0)) = " <> show (decrypt ((-c1) + (-c0)))
+  putStrLn $ "decrypt ((-c1) + (-c1)) = " <> show (decrypt ((-c1) + (-c1)))
 
   print (2 ^ theQ)
 
